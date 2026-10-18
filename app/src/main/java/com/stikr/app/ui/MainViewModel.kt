@@ -1,0 +1,240 @@
+package com.stikr.app.ui
+
+import android.app.Application
+import android.graphics.Bitmap
+import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.stikr.app.data.ImageLoader
+import com.stikr.app.data.PackRepository
+import com.stikr.app.data.StickerPack
+import com.stikr.app.editor.SubjectCutout
+import com.stikr.app.export.PackExporter
+import com.stikr.app.render.StickerCodec
+import com.stikr.app.render.StickerRenderer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+
+/** Everything the editor screen needs to draw itself. */
+data class EditorState(
+    val packId: String,
+    /** The photo as picked. */
+    val source: Bitmap? = null,
+    /** The photo after cut-out + trim, what the sticker is made of. */
+    val subject: Bitmap? = null,
+    /** The last rendered 512x512 sticker. */
+    val preview: Bitmap? = null,
+    val loading: Boolean = false,
+    val status: String? = null,
+    val saving: Boolean = false,
+    val style: StickerRenderer.Style = StickerRenderer.Style(),
+    val cutoutEnabled: Boolean = true,
+    val cutoutFailed: Boolean = false,
+) {
+    val ready: Boolean get() = preview != null && !loading && !saving
+}
+
+class MainViewModel(app: Application) : AndroidViewModel(app) {
+
+    private val repo = PackRepository(File(app.filesDir, "packs"))
+
+    private val _packs = MutableStateFlow<List<StickerPack>>(emptyList())
+    val packs: StateFlow<List<StickerPack>> = _packs.asStateFlow()
+
+    private val _editor = MutableStateFlow<EditorState?>(null)
+    val editor: StateFlow<EditorState?> = _editor.asStateFlow()
+
+    private val _message = MutableStateFlow<String?>(null)
+    val message: StateFlow<String?> = _message.asStateFlow()
+
+    init {
+        refresh()
+    }
+
+    // --------------------------------------------------------------- packs
+
+    fun refresh() {
+        viewModelScope.launch {
+            _packs.value = withContext(Dispatchers.IO) { repo.listPacks() }
+        }
+    }
+
+    fun createPack(name: String, onCreated: (StickerPack) -> Unit) {
+        viewModelScope.launch {
+            val pack = withContext(Dispatchers.IO) { repo.createPack(name) }
+            refresh()
+            onCreated(pack)
+        }
+    }
+
+    fun renamePack(packId: String, name: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.renamePack(packId, name) }
+            refresh()
+        }
+    }
+
+    fun deletePack(packId: String, onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.deletePack(packId) }
+            refresh()
+            onDeleted()
+        }
+    }
+
+    fun deleteSticker(packId: String, fileName: String) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.deleteSticker(packId, fileName) }
+            refresh()
+            notify("Sticker deleted")
+        }
+    }
+
+    fun notify(text: String) {
+        _message.value = text
+    }
+
+    fun consumeMessage() {
+        _message.value = null
+    }
+
+    // --------------------------------------------------------------- editor
+
+    fun startEditor(packId: String) {
+        _editor.value = EditorState(packId = packId)
+    }
+
+    fun closeEditor() {
+        _editor.value = null
+    }
+
+    fun loadImage(uri: Uri) {
+        val state = _editor.value ?: return
+        _editor.value = state.copy(loading = true, status = "Loading photo\u2026")
+        viewModelScope.launch {
+            val source = withContext(Dispatchers.IO) { ImageLoader.load(getApplication(), uri) }
+            if (source == null) {
+                _editor.value = _editor.value?.copy(loading = false, status = null)
+                notify("Couldn't read that photo")
+                return@launch
+            }
+            _editor.value = _editor.value?.copy(
+                source = source,
+                loading = true,
+                status = if (state.cutoutEnabled) "Cutting out the subject\u2026" else null,
+            )
+            val (subject, failed) = process(source, state.cutoutEnabled)
+            _editor.value = _editor.value?.copy(
+                subject = subject,
+                cutoutFailed = failed,
+                loading = false,
+                status = null,
+            )
+            renderPreview()
+            if (failed) notify("Auto cut-out isn't available \u2014 using the full photo")
+        }
+    }
+
+    fun setCutout(enabled: Boolean) {
+        val state = _editor.value ?: return
+        val source = state.source
+        if (source == null || (enabled == state.cutoutEnabled && state.subject != null)) {
+            _editor.value = state.copy(cutoutEnabled = enabled)
+            return
+        }
+        _editor.value = state.copy(
+            cutoutEnabled = enabled,
+            loading = true,
+            status = if (enabled) "Cutting out the subject\u2026" else null,
+        )
+        viewModelScope.launch {
+            val (subject, failed) = process(source, enabled)
+            _editor.value = _editor.value?.copy(
+                subject = subject,
+                cutoutFailed = failed,
+                loading = false,
+                status = null,
+            )
+            renderPreview()
+        }
+    }
+
+    fun setStyle(style: StickerRenderer.Style) {
+        _editor.value = _editor.value?.copy(style = style)
+        renderPreview()
+    }
+
+    fun saveSticker(onSaved: () -> Unit) {
+        val state = _editor.value ?: return
+        val preview = state.preview ?: return
+        if (state.saving) return
+        _editor.value = state.copy(saving = true)
+        viewModelScope.launch {
+            val bytes = withContext(Dispatchers.Default) { StickerCodec.encodeWebp(preview) }
+            val updated = withContext(Dispatchers.IO) { repo.addSticker(state.packId, bytes) }
+            _editor.value = null
+            refresh()
+            notify(if (updated != null) "Sticker saved" else "Couldn't save the sticker")
+            if (updated != null) onSaved()
+        }
+    }
+
+    // --------------------------------------------------------------- export
+
+    fun exportToWhatsApp(packId: String) {
+        val pack = _packs.value.firstOrNull { it.id == packId } ?: return
+        if (pack.stickerCount < PackRepository.MIN_WHATSAPP_STICKERS) {
+            notify("WhatsApp needs at least ${PackRepository.MIN_WHATSAPP_STICKERS} stickers in a pack")
+            return
+        }
+        viewModelScope.launch {
+            val prepared = withContext(Dispatchers.IO) { PackExporter.ensureTray(getApplication(), repo, pack) }
+            val launched = PackExporter.launchWhatsApp(getApplication(), prepared)
+            refresh()
+            if (!launched) notify("WhatsApp isn't installed \u2014 share a single sticker instead")
+        }
+    }
+
+    fun shareSticker(packId: String, fileName: String) {
+        val pack = _packs.value.firstOrNull { it.id == packId } ?: return
+        viewModelScope.launch {
+            PackExporter.shareSticker(getApplication(), repo, pack, fileName)
+        }
+    }
+
+    // ------------------------------------------------------------- internals
+
+    /** Produces the sticker subject: cut-out + trimmed, or the photo itself. */
+    private suspend fun process(source: Bitmap, cutout: Boolean): Pair<Bitmap, Boolean> =
+        withContext(Dispatchers.Default) {
+            if (!cutout) return@withContext source to false
+            val cut = SubjectCutout.cut(source)
+            if (cut == null) {
+                source to true
+            } else {
+                val trimmed = StickerRenderer.trimTransparent(cut)
+                if (trimmed !== cut) cut.recycle()
+                trimmed to false
+            }
+        }
+
+    private fun renderPreview() {
+        val state = _editor.value ?: return
+        val subject = state.subject ?: return
+        val style = state.style
+        viewModelScope.launch {
+            val preview = withContext(Dispatchers.Default) { StickerRenderer.render(subject, style) }
+            val current = _editor.value
+            if (current?.subject === subject && current.style == style) {
+                _editor.value = current.copy(preview = preview)
+            } else {
+                preview.recycle()
+            }
+        }
+    }
+}
