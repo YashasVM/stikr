@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only. The screen render tests (app/src/test/.../ScreenRenderTest.kt) drive
+  Compose through createComposeRule(), which launches androidx.activity.ComponentActivity.
+  Robolectric reads the merged debug manifest, so the activity must be declared there.
+  This file is not part of the release build.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name="androidx.activity.ComponentActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Stikr" />
+    </application>
+</manifest>

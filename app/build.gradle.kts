@@ -70,4 +70,8 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.13")
     testImplementation("androidx.test:core:1.6.1")
+
+    // Screen render tests: whole screens captured to build/ui-renders/ on the JVM.
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
 }
