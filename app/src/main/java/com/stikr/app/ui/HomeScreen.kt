@@ -1,31 +1,26 @@
 package com.stikr.app.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,15 +29,27 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.stikr.app.data.StickerPack
+import com.stikr.app.ui.neo.EmojiBadge
+import com.stikr.app.ui.neo.LogoRow
+import com.stikr.app.ui.neo.Neo
+import com.stikr.app.ui.neo.NeoButton
+import com.stikr.app.ui.neo.NeoCard
+import com.stikr.app.ui.neo.NeoDialog
+import com.stikr.app.ui.neo.NeoIconButton
+import com.stikr.app.ui.neo.NeoOutlinedButton
+import com.stikr.app.ui.neo.NeoSectionHeader
+import com.stikr.app.ui.neo.NeoTag
+import com.stikr.app.ui.neo.NeoTextField
+import com.stikr.app.ui.neo.StickerHeadline
+import com.stikr.app.ui.neo.neoFrame
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     packs: List<StickerPack>,
@@ -50,49 +57,60 @@ fun HomeScreen(
     onCreatePack: (String) -> Unit,
     onMakeSticker: () -> Unit,
 ) {
+    val palette = Neo.palette
     var showCreate by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
-        topBar = {
-            LargeTopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "stikr",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(
-                            text = "Photos in, stickers out",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-            )
-        },
+        containerColor = palette.paper,
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showCreate = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("New pack") },
-            )
+            if (packs.isNotEmpty()) {
+                NeoIconButton(
+                    onClick = { showCreate = true },
+                    icon = Icons.Default.Add,
+                    contentDescription = "New pack",
+                    fill = palette.butter,
+                    size = 58.dp,
+                    iconSize = 26.dp,
+                    shape = RoundedCornerShape(17.dp),
+                    shadow = 5.dp,
+                )
+            }
         },
     ) { padding ->
-        if (packs.isEmpty()) {
-            EmptyHome(onMakeSticker = onMakeSticker, modifier = Modifier.padding(padding))
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(packs, key = { it.id }) { pack ->
-                    PackCard(pack = pack, onClick = { onOpenPack(pack.id) })
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            contentPadding = PaddingValues(start = 20.dp, end = 24.dp, top = 10.dp, bottom = 110.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                LogoRow(modifier = Modifier.padding(bottom = 6.dp))
+            }
+
+            if (packs.isEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    EmptyHero(
+                        onMakeSticker = onMakeSticker,
+                        onCreatePack = { showCreate = true },
+                    )
+                }
+            } else {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    NeoSectionHeader(
+                        title = "Your packs",
+                        meta = if (packs.size == 1) "1 pack" else "${packs.size} packs",
+                    )
+                }
+                itemsIndexed(packs, key = { _, pack -> pack.id }) { index, pack ->
+                    PackCard(
+                        pack = pack,
+                        fill = packFill(index),
+                        showNew = index == 0 && packs.size > 1,
+                        onClick = { onOpenPack(pack.id) },
+                    )
                 }
             }
         }
@@ -112,75 +130,111 @@ fun HomeScreen(
     }
 }
 
+/** Packs cycle through the pastel card colours. */
 @Composable
-private fun EmptyHome(onMakeSticker: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(text = "\uD83C\uDFA8", style = MaterialTheme.typography.displayLarge)
-        Text(
-            text = "No packs yet",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(top = 16.dp),
+private fun packFill(index: Int): Color {
+    val palette = Neo.palette
+    val fills = listOf(palette.cyan, palette.green, palette.butter, palette.pink)
+    return fills[index % fills.size]
+}
+
+@Composable
+private fun EmptyHero(onMakeSticker: () -> Unit, onCreatePack: () -> Unit) {
+    val palette = Neo.palette
+    Column(modifier = Modifier.fillMaxWidth()) {
+        StickerHeadline(
+            text = "Turn any photo into a sticker",
+            accentWord = "sticker",
+            fontSize = 36.sp,
         )
+        Spacer(Modifier.height(18.dp))
         Text(
-            text = "Turn a photo into a sticker: cut out the subject, add a caption, share it anywhere.",
+            text = "Welcome to stikr \u2014 the sticker maker that lives on your phone. " +
+                "Cut out the subject, add an outline and a caption, keep the good ones. " +
+                "Nothing uploaded, ever.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp, start = 16.dp, end = 16.dp),
+            color = palette.muted,
         )
-        Button(onClick = onMakeSticker, modifier = Modifier.padding(top = 24.dp)) {
-            Text("Make a sticker")
-        }
+        Spacer(Modifier.height(24.dp))
+        EmojiBadge("\uD83C\uDFA8")
+        Spacer(Modifier.height(26.dp))
+        NeoButton(
+            text = "Make a sticker",
+            onClick = onMakeSticker,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(12.dp))
+        NeoOutlinedButton(
+            text = "Create a pack",
+            onClick = onCreatePack,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
 @Composable
-fun PackCard(pack: StickerPack, onClick: () -> Unit) {
+private fun PackCard(
+    pack: StickerPack,
+    fill: Color,
+    showNew: Boolean,
+    onClick: () -> Unit,
+) {
+    val palette = Neo.palette
     val context = LocalContext.current
     val root = remember(context) { File(context.filesDir, "packs") }
 
-    ElevatedCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .padding(12.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                val first = pack.stickers.firstOrNull()
-                if (first != null) {
-                    StickerImage(
-                        file = root.resolve(pack.id).resolve(first),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    Text(text = "\u2728", style = MaterialTheme.typography.displaySmall)
-                }
-            }
-            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-                Text(
-                    text = pack.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = if (pack.stickerCount == 1) "1 sticker" else "${pack.stickerCount} stickers",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+    NeoCard(
+        modifier = Modifier.fillMaxWidth(),
+        fill = fill,
+        padding = PaddingValues(12.dp),
+        onClick = onClick,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = pack.name.uppercase(),
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = 15.sp, lineHeight = 18.sp),
+                color = palette.onAccent,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (showNew) {
+                NeoTag("new", rotation = 7f)
             }
         }
+        Text(
+            text = if (pack.stickerCount == 1) "1 sticker" else "${pack.stickerCount} stickers",
+            style = MaterialTheme.typography.bodySmall,
+            color = palette.onAccent.copy(alpha = 0.62f),
+        )
+        Spacer(Modifier.height(10.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .neoFrame(RoundedCornerShape(12.dp), palette.card, palette.ink, 2.dp, 0.dp, palette.shadow)
+                .padding(8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            val first = pack.stickers.firstOrNull()
+            if (first != null) {
+                StickerImage(
+                    file = root.resolve(pack.id).resolve(first),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Text(text = "\u2728", fontSize = 26.sp)
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        NeoButton(
+            text = "Open",
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth(),
+            shadow = 3.dp,
+            contentPadding = PaddingValues(vertical = 9.dp),
+        )
     }
 }
 
@@ -194,26 +248,31 @@ fun NameDialog(
     onConfirm: (String) -> Unit,
 ) {
     var name by rememberSaveable { mutableStateOf(initial) }
+    val palette = Neo.palette
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            OutlinedTextField(
+    NeoDialog(
+        onDismiss = onDismiss,
+        title = title,
+        body = {
+            NeoTextField(
                 value = name,
                 onValueChange = { name = it },
-                singleLine = true,
-                label = { Text("Name") },
-                modifier = Modifier.fillMaxWidth(),
+                label = "Name",
             )
         },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(name.trim().ifEmpty { "Untitled pack" }) }) {
-                Text(confirmLabel)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+        actions = {
+            NeoOutlinedButton(
+                text = "Cancel",
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(vertical = 12.dp),
+            )
+            NeoButton(
+                text = confirmLabel,
+                onClick = { onConfirm(name.trim().ifEmpty { "Untitled pack" }) },
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(vertical = 12.dp),
+            )
         },
     )
 }
