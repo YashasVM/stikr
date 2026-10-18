@@ -16,8 +16,28 @@ android {
         versionName = "0.1"
     }
 
+    // Repo keystore (PKCS12): every release APK gets the same signature, so
+    // updates install over the old version instead of conflicting. Anyone with
+    // repo access can sign as this app — accepted tradeoff for a sideloaded
+    // app; back up keystore/release.p12 regardless.
+    signingConfigs {
+        create("release") {
+            storeFile = rootProject.file("keystore/release.p12")
+            storeType = "PKCS12"
+            storePassword = "stikr-release"
+            keyAlias = "stikr"
+            keyPassword = "stikr-release"
+        }
+    }
+
     buildTypes {
         release {
+            // Persistent repo keystore so every release carries the same
+            // signature and installs cleanly over the previous version.
+            signingConfig = signingConfigs.getByName("release")
+            // Minify stays off until a release has been exercised on a device:
+            // the cut-out path goes through Play services (ML Kit) and a
+            // mis-kept class would only show up at runtime.
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
