@@ -32,8 +32,9 @@ Native Android app, Kotlin + Jetpack Compose (Material 3), Android 8.0 and
 newer. Photos come from the system photo picker, so no storage permission is
 asked. Packs live as plain files in the app's private storage. Export to
 WhatsApp (and WhatsApp Business) goes through the standard sticker-pack
-ContentProvider contract, which stikr implements. Distribution is currently a
-sideloaded debug build; no releases exist yet.
+ContentProvider contract, which stikr implements. Distribution: signed release
+APKs sideloaded from GitHub Releases, starting with v0.1; releases are built and
+signed in CI with the persistent repo keystore whenever a `v*` tag is pushed.
 
 ## Capabilities and Constraints
 
@@ -51,16 +52,19 @@ Constraints: static stickers only, no animation; cut-out requires Google Play
 services, everything else works fully offline; no cloud, no accounts, no
 analytics, no telemetry; nothing is ever uploaded.
 
-Not shipped yet: releasing a signed APK through GitHub releases, tray-icon
-picker, multiple subjects, caption fonts, emoji suggestions per sticker.
+Not shipped yet: tray-icon picker, multiple subjects, caption fonts, emoji
+suggestions per sticker.
 
 ## Brand Commitments
 
 Name stikr (lowercase). Voice line: "Photos in, stickers out." Visual anchor:
 a sticker book — cream paper (#F1EDE7), ink outlines (#191715), hard offset
 shadows, pastel fills (butter #F8DFA0, cyan #9EDDE6, green #9CE4A4, pink
-#F3CDDA) and one loud red accent (#AE403E); Anton for display type. Source of
-truth: github.com/mrduhlol/stikr.
+#F3CDDA) and one loud red accent (#AE403E); Anton for display type. App mark:
+a white sticker "S" with a peeled corner on purple (#723AF4) — the launcher
+icon (`docs/brand/logo.png`); it lives outside the paper palette on purpose,
+since it has to stand alone on a home screen. Source of truth:
+github.com/mrduhlol/stikr.
 
 ## Evidence on Hand
 
@@ -68,9 +72,10 @@ truth: github.com/mrduhlol/stikr.
 - app/src/main (the whole app: renderer, cut-out, repository, export)
 - app/src/test renders visual samples to app/build/sticker-renders/ for review
   without a device
+- GitHub Releases — v0.1 is the first signed release (stikr.apk)
 
-Absence future work must not fabricate: no releases, no installs, no reviews,
-no user counts, no real app-store listing, no photos of real people.
+Absence future work must not fabricate: no installs, no reviews, no user counts,
+no real app-store listing, no photos of real people.
 
 ## Product Principles
 
