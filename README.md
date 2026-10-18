@@ -9,8 +9,10 @@ WhatsApp or share a sticker anywhere. No account, no upload, no watermark.
 - **Auto cut-out, on device** — the subject is cut from the background by ML Kit
   subject segmentation; the model is fetched once by Google Play services and
   everything runs locally
-- **A real sticker look** — a white outline (adjustable thickness) and an
-  optional caption in four colours, top or bottom
+- **A real sticker look** — an outline (white or ink, adjustable thickness) and
+  an optional caption in four colours, top or bottom
+- **A sticker-book look** — cream paper, ink outlines, hard offset shadows and
+  pastel cards; heavy Anton display type; light and dark
 - **Packs** — create, rename, and delete packs; add and delete stickers
 - **Add to WhatsApp** — export a pack (3–30 stickers) through the standard
   sticker-pack contract; stikr works with WhatsApp and WhatsApp Business
@@ -39,11 +41,29 @@ Or open the project in Android Studio and press Run.
 4. Once a pack has 3 or more stickers, tap **Add to WhatsApp** to import it;
    or use a sticker's menu to **Share** it as an image
 
+## Design
+
+![The three screens in light mode](docs/theme/screens-light.png)
+
+The look is a sticker book: cream paper, 2 dp ink outlines, hard offset shadows
+(never blurred), pastel card fills, and one loud red accent. Headlines are set
+in Anton; the home slogan is drawn as a sticker itself — white fill, ink
+outline, hard ink shadow, accent word in red.
+
+- `ui/theme/Theme.kt` — the palette (`NeoPalette`, exposed as `Neo.palette`),
+  Material 3 colour mapping, shapes, type scale. Pastel fills always carry
+  `onAccent` dark ink, so the look survives dark mode.
+- `ui/neo/Neo.kt` — the component kit: `neoFrame` (border + hard shadow),
+  `NeoCard`, `NeoButton`, `NeoIconButton`, `NeoChip`, `NeoTag`, `NeoDialog`,
+  `NeoTextField`, `StickerHeadline`, `NeoSnackbar`.
+- Font: Anton, bundled under the SIL Open Font License
+  (`licenses/anton-OFL.txt`).
+
 ## Development
 
 - Kotlin + Jetpack Compose (Material 3), minSdk 26, one module
-- `render/StickerRenderer.kt` draws the final 512x512 sticker: dilated white
-  silhouette for the outline, subject on top, caption last
+- `render/StickerRenderer.kt` draws the final 512x512 sticker: dilated
+  silhouette for the outline (white or ink), subject on top, caption last
 - `render/StickerCodec.kt` encodes WebP and walks the quality down until the
   file fits WhatsApp's limits (100 KB per sticker, 50 KB per tray icon)
 - `editor/SubjectCutout.kt` wraps ML Kit subject segmentation in a suspend
@@ -52,5 +72,9 @@ Or open the project in Android Studio and press Run.
   private storage — no database
 - `export/StickerPackContentProvider.kt` implements WhatsApp's pack contract
   (metadata + `stickers_asset` + `sticker_pack_icon`)
-- Visual review without a device: `./gradlew testDebugUnitTest` renders sample
-  stickers to `app/build/sticker-renders/` (Robolectric)
+- Visual review without a device:
+  - `./gradlew testDebugUnitTest` renders sample stickers to
+    `app/build/sticker-renders/` (Robolectric)
+  - `./gradlew testDebugUnitTest --tests "com.stikr.app.ui.ScreenRenderTest"`
+    renders whole screens — light and dark, dialogs included — to
+    `app/build/ui-renders/`; the committed copies live in `docs/theme/`
