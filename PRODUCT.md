@@ -39,11 +39,13 @@ sideloaded debug build; no releases exist yet.
 
 Confirmed in v0: photo picker; on-device auto cut-out using ML Kit subject
 segmentation (model fetched by Google Play services on first use; falls back to
-the full photo when unavailable, with the toggle exposed); white outline with
-adjustable thickness; optional caption with four colours, top or bottom;
-packs with create, rename, delete; add and delete stickers; export a pack to
-WhatsApp (3–30 stickers per pack); share a single sticker as a PNG through the
-share sheet; light and dark theme.
+the full photo when unavailable, with the toggle exposed); outline in white or
+ink with adjustable thickness; optional caption in four colours (cream, ink,
+butter, cherry), top or bottom; packs with create, rename, delete; add and
+delete stickers; export a pack to WhatsApp (3–30 stickers per pack); share a
+single sticker as a PNG through the share sheet; light and dark theme in the
+sticker-book look (cream paper, ink outlines, hard shadows, pastel cards,
+Anton display type).
 
 Constraints: static stickers only, no animation; cut-out requires Google Play
 services, everything else works fully offline; no cloud, no accounts, no
@@ -55,8 +57,10 @@ picker, multiple subjects, caption fonts, emoji suggestions per sticker.
 ## Brand Commitments
 
 Name stikr (lowercase). Voice line: "Photos in, stickers out." Visual anchor:
-violet (primary #6C5CE7) with mint and peach accents. Source of truth:
-github.com/mrduhlol/stikr.
+a sticker book — cream paper (#F1EDE7), ink outlines (#191715), hard offset
+shadows, pastel fills (butter #F8DFA0, cyan #9EDDE6, green #9CE4A4, pink
+#F3CDDA) and one loud red accent (#AE403E); Anton for display type. Source of
+truth: github.com/mrduhlol/stikr.
 
 ## Evidence on Hand
 
