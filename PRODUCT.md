@@ -32,8 +32,9 @@ Native Android app, Kotlin + Jetpack Compose (Material 3), Android 8.0 and
 newer. Photos come from the system photo picker, so no storage permission is
 asked. Packs live as plain files in the app's private storage. Export to
 WhatsApp (and WhatsApp Business) goes through the standard sticker-pack
-ContentProvider contract, which stikr implements. Distribution is currently a
-sideloaded debug build; no releases exist yet.
+ContentProvider contract, which stikr implements. Distribution: signed release
+APKs sideloaded from GitHub Releases, starting with v0.1; releases are built and
+signed in CI with the persistent repo keystore whenever a `v*` tag is pushed.
 
 ## Capabilities and Constraints
 
@@ -51,8 +52,8 @@ Constraints: static stickers only, no animation; cut-out requires Google Play
 services, everything else works fully offline; no cloud, no accounts, no
 analytics, no telemetry; nothing is ever uploaded.
 
-Not shipped yet: releasing a signed APK through GitHub releases, tray-icon
-picker, multiple subjects, caption fonts, emoji suggestions per sticker.
+Not shipped yet: tray-icon picker, multiple subjects, caption fonts, emoji
+suggestions per sticker.
 
 ## Brand Commitments
 
@@ -68,9 +69,10 @@ truth: github.com/mrduhlol/stikr.
 - app/src/main (the whole app: renderer, cut-out, repository, export)
 - app/src/test renders visual samples to app/build/sticker-renders/ for review
   without a device
+- GitHub Releases — v0.1 is the first signed release (stikr.apk)
 
-Absence future work must not fabricate: no releases, no installs, no reviews,
-no user counts, no real app-store listing, no photos of real people.
+Absence future work must not fabricate: no installs, no reviews, no user counts,
+no real app-store listing, no photos of real people.
 
 ## Product Principles
 
