@@ -1,6 +1,7 @@
 package com.stikr.app.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.stikr.app.ui.neo.Neo
+import com.stikr.app.ui.neo.NeoSnackbar
 
 private enum class Screen { HOME, PACK, EDITOR }
 
@@ -63,7 +66,7 @@ fun StikrApp(viewModel: MainViewModel = viewModel()) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(Neo.palette.paper)) {
         when (screen) {
             Screen.HOME.name -> HomeScreen(
                 packs = packs,
@@ -113,7 +116,9 @@ fun StikrApp(viewModel: MainViewModel = viewModel()) {
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(16.dp),
-        )
+        ) { data ->
+            NeoSnackbar(data)
+        }
     }
 
     BackHandler(enabled = screen != Screen.HOME.name) {

@@ -1,15 +1,18 @@
 package com.stikr.app.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -22,21 +25,12 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,16 +39,24 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.stikr.app.data.PackRepository
 import com.stikr.app.data.StickerPack
 import com.stikr.app.export.PackExporter
+import com.stikr.app.ui.neo.Neo
+import com.stikr.app.ui.neo.NeoButton
+import com.stikr.app.ui.neo.NeoCard
+import com.stikr.app.ui.neo.NeoDialog
+import com.stikr.app.ui.neo.NeoIconButton
+import com.stikr.app.ui.neo.NeoOutlinedButton
+import com.stikr.app.ui.neo.NeoSectionHeader
+import com.stikr.app.ui.neo.NeoTag
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PackScreen(
     pack: StickerPack,
@@ -66,6 +68,7 @@ fun PackScreen(
     onShareSticker: (String) -> Unit,
     onExport: () -> Unit,
 ) {
+    val palette = Neo.palette
     val context = LocalContext.current
     val root = remember(context) { File(context.filesDir, "packs") }
     var showRename by rememberSaveable { mutableStateOf(false) }
@@ -73,40 +76,24 @@ fun PackScreen(
     val whatsAppInstalled = remember { PackExporter.isWhatsAppInstalled(context) }
     val missing = (PackRepository.MIN_WHATSAPP_STICKERS - pack.stickerCount).coerceAtLeast(0)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(pack.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showRename = true }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Rename pack")
-                    }
-                    IconButton(onClick = { showDelete = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete pack")
-                    }
-                },
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddSticker) {
-                Icon(Icons.Default.Add, contentDescription = "Add sticker")
-            }
-        },
-    ) { padding ->
+    Scaffold(containerColor = palette.paper) { padding ->
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 24.dp, top = 8.dp, bottom = 40.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                TopBar(
+                    pack = pack,
+                    onBack = onBack,
+                    onRename = { showRename = true },
+                    onDelete = { showDelete = true },
+                )
+            }
             item(span = { GridItemSpan(maxLineSpan) }) {
                 ExportCard(
                     whatsAppInstalled = whatsAppInstalled,
@@ -115,12 +102,22 @@ fun PackScreen(
                     onExport = onExport,
                 )
             }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                NeoSectionHeader(
+                    title = "Stickers",
+                    meta = if (pack.stickerCount == 1) "1" else "${pack.stickerCount}",
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
             items(pack.stickers, key = { it }) { fileName ->
                 StickerTile(
                     file = root.resolve(pack.id).resolve(fileName),
                     onShare = { onShareSticker(fileName) },
                     onDelete = { onDeleteSticker(fileName) },
                 )
+            }
+            item {
+                AddTile(onClick = onAddSticker)
             }
         }
     }
@@ -139,19 +136,87 @@ fun PackScreen(
     }
 
     if (showDelete) {
-        AlertDialog(
-            onDismissRequest = { showDelete = false },
-            title = { Text("Delete \"${pack.name}\"?") },
-            text = { Text("This removes the pack and its stickers from stikr. WhatsApp copies it already imported are not affected.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDelete = false
-                    onDelete()
-                }) { Text("Delete") }
+        NeoDialog(
+            onDismiss = { showDelete = false },
+            title = "Delete this pack?",
+            body = {
+                Text(
+                    text = "\u201C${pack.name}\u201D and its ${pack.stickerCount} " +
+                        "${if (pack.stickerCount == 1) "sticker" else "stickers"} will be removed from stikr. " +
+                        "Copies already imported into WhatsApp are not affected.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = palette.muted,
+                )
             },
-            dismissButton = {
-                TextButton(onClick = { showDelete = false }) { Text("Cancel") }
+            actions = {
+                NeoOutlinedButton(
+                    text = "Cancel",
+                    onClick = { showDelete = false },
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(vertical = 12.dp),
+                )
+                NeoButton(
+                    text = "Delete",
+                    onClick = {
+                        showDelete = false
+                        onDelete()
+                    },
+                    modifier = Modifier.weight(1f),
+                    fill = palette.cherry,
+                    contentColor = Color.White,
+                    contentPadding = PaddingValues(vertical = 12.dp),
+                )
             },
+        )
+    }
+}
+
+@Composable
+private fun TopBar(
+    pack: StickerPack,
+    onBack: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val palette = Neo.palette
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        NeoIconButton(
+            onClick = onBack,
+            icon = Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = "Back",
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp),
+        ) {
+            Text(
+                text = pack.name.uppercase(),
+                style = MaterialTheme.typography.titleLarge,
+                color = palette.ink,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = if (pack.stickerCount == 1) "1 sticker" else "${pack.stickerCount} stickers",
+                style = MaterialTheme.typography.bodySmall,
+                color = palette.muted,
+            )
+        }
+        NeoIconButton(
+            onClick = onRename,
+            icon = Icons.Default.Edit,
+            contentDescription = "Rename pack",
+        )
+        Spacer(Modifier.size(10.dp))
+        NeoIconButton(
+            onClick = onDelete,
+            icon = Icons.Default.Delete,
+            contentDescription = "Delete pack",
+            fill = palette.pink,
         )
     }
 }
@@ -163,35 +228,36 @@ private fun ExportCard(
     exportable: Boolean,
     onExport: () -> Unit,
 ) {
-    ElevatedCard(
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+    val palette = Neo.palette
+    NeoCard(
+        modifier = Modifier.fillMaxWidth(),
+        fill = if (whatsAppInstalled) palette.green else palette.cyan,
+        padding = PaddingValues(16.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (whatsAppInstalled) "Add to WhatsApp" else "Share a sticker",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Text(
-                    text = when {
-                        !whatsAppInstalled -> "WhatsApp isn't installed on this phone."
-                        missing > 0 -> "Add $missing more ${if (missing == 1) "sticker" else "stickers"} \u2014 WhatsApp needs ${PackRepository.MIN_WHATSAPP_STICKERS}."
-                        else -> "Import this pack into your WhatsApp stickers."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
-            Button(onClick = onExport, enabled = exportable) {
-                Text("Add")
-            }
-        }
+        NeoTag(if (whatsAppInstalled) "whatsapp" else "coming up", rotation = -5f)
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = if (whatsAppInstalled) "Add this pack to WhatsApp" else "Share a sticker",
+            style = MaterialTheme.typography.headlineSmall.copy(fontSize = 19.sp, lineHeight = 23.sp),
+            color = palette.onAccent,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = when {
+                !whatsAppInstalled -> "WhatsApp isn't installed on this phone. You can still share single stickers from the grid below."
+                missing > 0 -> "Add $missing more ${if (missing == 1) "sticker" else "stickers"} \u2014 WhatsApp needs ${PackRepository.MIN_WHATSAPP_STICKERS} per pack."
+                else -> "Import this pack into your WhatsApp sticker tray."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = palette.onAccent.copy(alpha = 0.68f),
+        )
+        Spacer(Modifier.height(14.dp))
+        NeoButton(
+            text = if (whatsAppInstalled) "Add to WhatsApp" else "WhatsApp not found",
+            onClick = onExport,
+            enabled = exportable,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -199,22 +265,31 @@ private fun ExportCard(
 private fun StickerTile(file: File, onShare: () -> Unit, onDelete: () -> Unit) {
     var menuOpen by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = Modifier
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .padding(6.dp),
-    ) {
-        StickerImage(file = file, contentDescription = null, modifier = Modifier.fillMaxSize())
+    Box {
+        NeoCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f),
+            shape = RoundedCornerShape(14.dp),
+            shadow = 3.dp,
+            padding = PaddingValues(8.dp),
+        ) {
+            StickerImage(
+                file = file,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         Box(modifier = Modifier.align(Alignment.TopEnd)) {
-            IconButton(onClick = { menuOpen = true }) {
-                Icon(
-                    Icons.Default.MoreVert,
-                    contentDescription = "Sticker options",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            NeoIconButton(
+                onClick = { menuOpen = true },
+                icon = Icons.Default.MoreVert,
+                contentDescription = "Sticker options",
+                size = 28.dp,
+                iconSize = 15.dp,
+                shadow = 2.dp,
+                borderWidth = 1.5.dp,
+            )
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
                     text = { Text("Share") },
@@ -231,6 +306,37 @@ private fun StickerTile(file: File, onShare: () -> Unit, onDelete: () -> Unit) {
                         menuOpen = false
                         onDelete()
                     },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddTile(onClick: () -> Unit) {
+    val palette = Neo.palette
+    NeoCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f),
+        fill = palette.butter,
+        shape = RoundedCornerShape(14.dp),
+        shadow = 3.dp,
+        onClick = onClick,
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Add sticker",
+                    tint = palette.onAccent,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Add",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = palette.onAccent,
                 )
             }
         }

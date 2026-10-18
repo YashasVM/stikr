@@ -2,7 +2,6 @@ package com.stikr.app.render
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
@@ -14,8 +13,8 @@ import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * Draws the final 512x512 sticker: an optional white outline (a dilated
- * silhouette), the subject on top, then a caption.
+ * Draws the final 512x512 sticker: an optional outline (a dilated
+ * silhouette, white or ink), the subject on top, then a caption.
  */
 object StickerRenderer {
 
@@ -25,18 +24,25 @@ object StickerRenderer {
 
     enum class CaptionPosition { TOP, BOTTOM }
 
+    /** Outline colour: classic sticker white, or the ink of the app's theme. */
+    enum class OutlineColor(val color: Int) {
+        WHITE(0xFFFFFFFF.toInt()),
+        INK(0xFF191715.toInt()),
+    }
+
     enum class CaptionColor(val fill: Int, val stroke: Int) {
-        WHITE(0xFFFFFFFF.toInt(), 0xFF1E1A2E.toInt()),
-        BLACK(0xFF241F33.toInt(), 0xFFFFFFFF.toInt()),
-        YELLOW(0xFFFFE14D.toInt(), 0xFF4A3A00.toInt()),
-        VIOLET(0xFFB9AEFF.toInt(), 0xFF241B63.toInt()),
+        CREAM(0xFFFFFFFF.toInt(), 0xFF191715.toInt()),
+        INK(0xFF191715.toInt(), 0xFFFFFFFF.toInt()),
+        BUTTER(0xFFF8DFA0.toInt(), 0xFF191715.toInt()),
+        CHERRY(0xFFAE403E.toInt(), 0xFFFFFFFF.toInt()),
     }
 
     data class Style(
         val outline: Int = 8,
+        val outlineColor: OutlineColor = OutlineColor.WHITE,
         val caption: String = "",
         val captionPosition: CaptionPosition = CaptionPosition.BOTTOM,
-        val captionColor: CaptionColor = CaptionColor.WHITE,
+        val captionColor: CaptionColor = CaptionColor.CREAM,
     )
 
     fun render(subject: Bitmap, style: Style): Bitmap {
@@ -53,7 +59,7 @@ object StickerRenderer {
 
         val scaled = Bitmap.createScaledBitmap(subject, drawWidth, drawHeight, true)
         if (outline > 0) {
-            val silhouette = whiteSilhouette(scaled)
+            val silhouette = silhouette(scaled, style.outlineColor.color)
             val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
             val steps = 24
             for (step in 0 until steps) {
@@ -131,10 +137,10 @@ object StickerRenderer {
 
     // ------------------------------------------------------------- internals
 
-    private fun whiteSilhouette(src: Bitmap): Bitmap {
+    private fun silhouette(src: Bitmap, color: Int): Bitmap {
         val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
-            colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN)
+            colorFilter = PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN)
         }
         Canvas(out).drawBitmap(src, 0f, 0f, paint)
         return out
