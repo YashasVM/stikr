@@ -60,8 +60,11 @@ suggestions per sticker.
 Name stikr (lowercase). Voice line: "Photos in, stickers out." Visual anchor:
 a sticker book — cream paper (#F1EDE7), ink outlines (#191715), hard offset
 shadows, pastel fills (butter #F8DFA0, cyan #9EDDE6, green #9CE4A4, pink
-#F3CDDA) and one loud red accent (#AE403E); Anton for display type. Source of
-truth: github.com/mrduhlol/stikr.
+#F3CDDA) and one loud red accent (#AE403E); Anton for display type. App mark:
+a white sticker "S" with a peeled corner on purple (#723AF4) — the launcher
+icon (`docs/brand/logo.png`); it lives outside the paper palette on purpose,
+since it has to stand alone on a home screen. Source of truth:
+github.com/mrduhlol/stikr.
 
 ## Evidence on Hand
 

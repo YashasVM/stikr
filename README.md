@@ -73,6 +73,10 @@ outline, hard ink shadow, accent word in red.
   `NeoTextField`, `StickerHeadline`, `NeoSnackbar`.
 - Font: Anton, bundled under the SIL Open Font License
   (`licenses/anton-OFL.txt`).
+- App icon: the sticker "S" — a white mark with a peeled corner on purple
+  (`#723AF4`). Source: `docs/brand/logo.png`; the adaptive icon uses it as a
+  raster foreground (`res/mipmap-*/ic_launcher_foreground.png`) over the
+  purple background colour.
 
 ## Development
 
