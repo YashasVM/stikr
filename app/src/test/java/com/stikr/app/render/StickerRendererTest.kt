@@ -44,7 +44,7 @@ class StickerRendererTest {
             StickerRenderer.Style(
                 outline = 10,
                 caption = "hello!",
-                captionColor = StickerRenderer.CaptionColor.WHITE,
+                captionColor = StickerRenderer.CaptionColor.CREAM,
             ),
         )
 
@@ -54,6 +54,22 @@ class StickerRendererTest {
         assertEquals(0, Color.alpha(sticker.getPixel(2, 2)))
         assertEquals(0, Color.alpha(sticker.getPixel(StickerRenderer.SIZE - 3, 2)))
         save("sticker_full.png", sticker)
+    }
+
+    @Test
+    fun inkOutlinePaintsTheSilhouetteInInk() {
+        val sticker = StickerRenderer.render(
+            samplePhoto(),
+            StickerRenderer.Style(outline = 14, outlineColor = StickerRenderer.OutlineColor.INK),
+        )
+        // straight down from centre: image bottom -> ink outline ring -> transparent
+        var outlinePixels = 0
+        for (y in StickerRenderer.SIZE / 2 until StickerRenderer.SIZE) {
+            val pixel = sticker.getPixel(StickerRenderer.SIZE / 2, y)
+            if (pixel == StickerRenderer.OutlineColor.INK.color) outlinePixels++
+        }
+        assertTrue("expected an ink outline band, found $outlinePixels ink pixels", outlinePixels > 6)
+        save("sticker_ink_outline.png", sticker)
     }
 
     @Test
@@ -78,12 +94,17 @@ class StickerRendererTest {
                 outline = 12,
                 caption = "top",
                 captionPosition = StickerRenderer.CaptionPosition.TOP,
-                captionColor = StickerRenderer.CaptionColor.YELLOW,
+                captionColor = StickerRenderer.CaptionColor.BUTTER,
             ),
-            "sticker_violet_caption" to StickerRenderer.Style(
+            "sticker_cherry_caption" to StickerRenderer.Style(
                 outline = 6,
-                caption = "violet",
-                captionColor = StickerRenderer.CaptionColor.VIOLET,
+                caption = "cherry",
+                captionColor = StickerRenderer.CaptionColor.CHERRY,
+            ),
+            "sticker_ink_caption" to StickerRenderer.Style(
+                outline = 8,
+                caption = "ink",
+                captionColor = StickerRenderer.CaptionColor.INK,
             ),
             "sticker_long_caption" to StickerRenderer.Style(
                 outline = 6,
