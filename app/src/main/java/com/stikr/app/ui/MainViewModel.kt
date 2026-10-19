@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 
 /** Everything the editor screen needs to draw itself. */
 data class EditorState(
@@ -101,15 +102,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun createPack(name: String, onCreated: (StickerPack) -> Unit) {
         viewModelScope.launch {
-            val pack = withContext(Dispatchers.IO) { repo.createPack(name) }
+            val pack = storage { repo.createPack(name) }
             refresh()
-            onCreated(pack)
+            if (pack != null) onCreated(pack) else notify("Couldn't create the pack")
         }
     }
 
     fun renamePack(packId: String, name: String) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { repo.renamePack(packId, name) }
+            if (storage { repo.renamePack(packId, name) } == null) notify("Couldn't rename the pack")
             refresh()
         }
     }
@@ -124,9 +125,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteSticker(packId: String, fileName: String) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { repo.deleteSticker(packId, fileName) }
+            val updated = storage { repo.deleteSticker(packId, fileName) }
             refresh()
-            notify("Sticker deleted")
+            notify(if (updated != null) "Sticker deleted" else "Couldn't delete the sticker")
         }
     }
 
@@ -239,11 +240,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     sticker.recycle()
                 }
             }
-            val updated = withContext(Dispatchers.IO) { repo.addSticker(state.packId, bytes) }
+            val updated = storage { repo.addSticker(state.packId, bytes) }
+            if (updated == null) {
+                // Keep the photo and style so the user can retry.
+                _editor.value = _editor.value?.copy(saving = false)
+                notify("Couldn't save the sticker")
+                return@launch
+            }
             closeEditor()
             refresh()
-            notify(if (updated != null) "Sticker saved" else "Couldn't save the sticker")
-            if (updated != null) onSaved()
+            notify("Sticker saved")
+            onSaved()
         }
     }
 
@@ -259,7 +266,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _exportingPackId.value = packId
         viewModelScope.launch {
             try {
-                val prepared = withContext(Dispatchers.IO) { PackExporter.ensureTray(getApplication(), repo, pack) }
+                val prepared = try {
+                    PackExporter.ensureTray(getApplication(), repo, pack)
+                } catch (_: IOException) {
+                    notify("Couldn't prepare the pack for WhatsApp")
+                    return@launch
+                }
                 val launched = PackExporter.launchWhatsApp(getApplication(), prepared)
                 refresh()
                 if (!launched) notify("WhatsApp isn't installed \u2014 share a single sticker instead")
@@ -291,6 +303,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 trimmed to false
             }
         }
+
+    /** Runs a repository write off the main thread; null when storage fails (e.g. a full disk). */
+    private suspend fun <T> storage(block: () -> T): T? = withContext(Dispatchers.IO) {
+        try {
+            block()
+        } catch (_: IOException) {
+            null
+        }
+    }
 
     private fun renderPreview() {
         previewRequests.trySend(Unit)
