@@ -53,9 +53,10 @@ Uninstalling removes local packs, so share stickers you want to keep first.
 
 1. Open **stikr** and tap **Make a sticker**, or create a pack first.
 2. Pick a photo. stikr cuts out the subject automatically when available.
-3. Adjust the **outline**, add a **caption** if you want, and tap **Add to pack**.
+3. Adjust the **outline**, add a **caption** if you want, and tap
+   **Add to “*pack name*”**.
 4. With 3–30 stickers in a pack, tap **Add to WhatsApp** to import it.
-   To send one image, open a sticker's menu and choose **Share**.
+   To send one image, tap the sticker and choose **Share**.
 
 The cut-out model downloads on first use through Google Play services.
 When cut-out is unavailable, stikr falls back to the full photo with the toggle exposed.
@@ -74,23 +75,32 @@ When cut-out is unavailable, stikr falls back to the full photo with the toggle 
 
 </details>
 
-Cream paper, **2 dp ink outlines**, hard offset shadows with no blur, pastel
-cards, and one red accent. Anton headlines. The home slogan is a sticker itself,
-with a white fill, ink outline, hard ink shadow, and an accent word in red.
-The screenshots use sample stickers.
+Neo-brutalist sticker book: cream paper, **3 dp ink borders** on every
+framed surface, hard offset shadows with no blur (3, 5 and 8 dp) that buttons
+and cards press into, flat pastel cards and one red accent. Anton headlines,
+uppercase **Space Mono** labels, buttons and counters. The home slogan knocks
+STICKERS out of a tilted red slab. Purple, the app-mark colour, marks progress
+bars and keyboard focus. Dark mode inverts the print: near-black paper with
+cream ink and cream shadows, while the pastels keep their colours. The
+screenshots use sample stickers.
 
 | Paper | Ink | Butter | Cyan | Green | Pink | Red accent | Purple mark |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `#F1EDE7` | `#191715` | `#F8DFA0` | `#9EDDE6` | `#9CE4A4` | `#F3CDDA` | `#AE403E` | `#723AF4` |
 
 - [`ui/theme/Theme.kt`](app/src/main/java/com/stikr/app/ui/theme/Theme.kt)
-  defines `NeoPalette`, exposed as `Neo.palette`, Material 3 colour mapping,
-  shapes, and the type scale. Pastel fills carry dark `onAccent` ink in both themes.
-- [`ui/neo/Neo.kt`](app/src/main/java/com/stikr/app/ui/neo/Neo.kt)
-  contains `neoFrame` for borders and hard shadows, `NeoCard`, `NeoButton`,
-  `NeoIconButton`, `NeoChip`, `NeoTag`, `NeoDialog`, `NeoTextField`,
-  `StickerHeadline`, and `NeoSnackbar`.
-- Anton is bundled under the [SIL Open Font License](licenses/anton-OFL.txt).
+  defines `NeoPalette`, exposed as `Neo.palette`, Material 3 colour mapping and
+  the type scale. Pastel fills carry dark `onAccent` ink in both themes.
+  [`ui/theme/Tokens.kt`](app/src/main/java/com/stikr/app/ui/theme/Tokens.kt)
+  holds the border, shadow, spacing, shape and motion tokens.
+- [`ui/neo/`](app/src/main/java/com/stikr/app/ui/neo/) is the component kit:
+  `neoFrame` for borders and pressable hard shadows, `NeoCard`, `NeoButton`,
+  `NeoOutlinedButton`, `NeoIconButton`, `NeoSegmented`, `NeoSwitch`,
+  `NeoSlider`, `NeoSwatch`, `NeoTag`, `NeoSectionHeader`, `NeoDialog`,
+  `NeoTextField`, `NeoSnackbar`, `NeoEmptyState`, `NeoProgressBar`,
+  `NeoMeter`, `StickerHeadline` and `NeoWordmark`, plus press haptics.
+- Anton and Space Mono are bundled under the SIL Open Font License
+  ([Anton](licenses/anton-OFL.txt), [Space Mono](licenses/space-mono-OFL.txt)).
 - The app icon is a white sticker “S” with a peeled corner on purple `#723AF4`.
   Source: [`docs/brand/logo.png`](docs/brand/logo.png). The adaptive icon uses a
   raster foreground at `res/mipmap-*/ic_launcher_foreground.png` over purple.
@@ -115,8 +125,10 @@ Or open the project in Android Studio and press **Run**.
 | `render/StickerRenderer.kt` | Draws a 512×512 sticker: dilated silhouette for the white or ink outline, subject on top, caption last. |
 | `render/StickerCodec.kt` | Encodes WebP, reducing quality until the file fits WhatsApp's limits of 100 KB per sticker and 50 KB per tray icon. |
 | `editor/SubjectCutout.kt` | Wraps ML Kit segmentation in a suspend function. Returns null when cut-out is unavailable. |
-| `data/PackRepository.kt` | Stores packs as files and `pack.json` in private app storage. No database. |
-| `export/StickerPackContentProvider.kt` | Implements the WhatsApp pack contract: metadata, `stickers_asset`, and `sticker_pack_icon`. |
+| `data/PackRepository.kt` | Stores packs as files and `pack.json` in private app storage. No database. Caches parsed `pack.json` until the file changes. |
+| `export/StickerPackContentProvider.kt` | Implements WhatsApp's sticker provider contract: `metadata`, `stickers/<pack>`, and `stickers_asset/<pack>/<file>`, readable only with `com.whatsapp.sticker.READ`. |
+| `ui/MainViewModel.kt` | Editor and pack state. Slider drags are conflated into one preview render at a time, reusing the outlined subject layer when only the caption changes. |
+| `ui/StickerImage.kt` | Decodes sticker thumbnails off the main thread at their displayed size, into a shared 8 MB memory cache. |
 
 ### Test and inspect renders
 
@@ -127,7 +139,19 @@ Or open the project in Android Studio and press **Run**.
 
 Robolectric renders sample stickers to `app/build/sticker-renders/`.
 The screen test renders whole screens in light and dark, including dialogs,
-to `app/build/ui-renders/`. Committed screen images live in `docs/theme/`.
+empty, loading, saving and exporting states, to `app/build/ui-renders/`.
+`python3 docs/theme/make-screens.py` (needs Pillow) turns those renders into the
+committed `docs/theme/screens-*.png`; copy them to `docs/site/assets/` too.
+
+### Build speed and startup
+
+`gradle.properties` turns on the configuration cache, the build cache and
+parallel execution, so repeat builds skip configuration and reuse task
+outputs. CI caches Gradle with `gradle/actions/setup-gradle`, runs the unit
+tests on pushes to `main` and release tags, and uploads their reports. Release APKs bundle a baseline
+profile for launch and the home screen (`app/src/main/baseline-prof.txt`),
+which `androidx.profileinstaller` installs on sideloaded phones. Compose
+preview tooling ships in debug builds only.
 
 ### Release
 
