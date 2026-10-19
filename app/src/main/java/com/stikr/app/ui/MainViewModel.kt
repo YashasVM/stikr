@@ -13,6 +13,8 @@ import com.stikr.app.export.PackExporter
 import com.stikr.app.render.StickerCodec
 import com.stikr.app.render.StickerRenderer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,8 +54,37 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
+    private val previewRequests = Channel<Unit>(Channel.CONFLATED)
+    private var imageRequest = 0L
+
     init {
         refresh()
+        viewModelScope.launch {
+            val renderer = StickerRenderer.PreviewCache()
+            try {
+                for (request in previewRequests) {
+                    // One worker and one pending request, even during a fast slider drag.
+                    delay(32)
+                    previewRequests.tryReceive()
+                    val state = _editor.value
+                    val subject = state?.subject
+                    if (state == null || subject == null || state.loading || state.saving) {
+                        renderer.clear()
+                        continue
+                    }
+                    val version = imageRequest
+                    val preview = withContext(Dispatchers.Default) { renderer.render(subject, state.style) }
+                    val current = _editor.value
+                    if (imageRequest == version && current?.subject === subject && current.style == state.style) {
+                        _editor.value = current.copy(preview = preview)
+                    } else {
+                        preview.recycle()
+                    }
+                }
+            } finally {
+                renderer.clear()
+            }
+        }
     }
 
     // --------------------------------------------------------------- packs
@@ -106,18 +137,27 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // --------------------------------------------------------------- editor
 
     fun startEditor(packId: String) {
+        imageRequest++
         _editor.value = EditorState(packId = packId)
+        renderPreview()
     }
 
     fun closeEditor() {
+        imageRequest++
         _editor.value = null
+        renderPreview()
     }
 
     fun loadImage(uri: Uri) {
         val state = _editor.value ?: return
+        val request = ++imageRequest
         _editor.value = state.copy(loading = true, status = "Loading photo\u2026")
         viewModelScope.launch {
             val source = withContext(Dispatchers.IO) { ImageLoader.load(getApplication(), uri) }
+            if (request != imageRequest) {
+                source?.recycle()
+                return@launch
+            }
             if (source == null) {
                 _editor.value = _editor.value?.copy(loading = false, status = null)
                 notify("Couldn't read that photo")
@@ -129,6 +169,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 status = if (state.cutoutEnabled) "Cutting out the subject\u2026" else null,
             )
             val (subject, failed) = process(source, state.cutoutEnabled)
+            if (request != imageRequest) {
+                if (subject !== source) subject.recycle()
+                return@launch
+            }
             _editor.value = _editor.value?.copy(
                 subject = subject,
                 cutoutFailed = failed,
@@ -147,6 +191,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _editor.value = state.copy(cutoutEnabled = enabled)
             return
         }
+        val request = ++imageRequest
         _editor.value = state.copy(
             cutoutEnabled = enabled,
             loading = true,
@@ -154,6 +199,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         )
         viewModelScope.launch {
             val (subject, failed) = process(source, enabled)
+            if (request != imageRequest) {
+                if (subject !== source) subject.recycle()
+                return@launch
+            }
             _editor.value = _editor.value?.copy(
                 subject = subject,
                 cutoutFailed = failed,
@@ -165,19 +214,29 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setStyle(style: StickerRenderer.Style) {
-        _editor.value = _editor.value?.copy(style = style)
+        val state = _editor.value ?: return
+        if (state.style == style || state.saving) return
+        _editor.value = state.copy(style = style)
         renderPreview()
     }
 
     fun saveSticker(onSaved: () -> Unit) {
         val state = _editor.value ?: return
-        val preview = state.preview ?: return
-        if (state.saving) return
+        val subject = state.subject ?: return
+        if (!state.ready) return
         _editor.value = state.copy(saving = true)
         viewModelScope.launch {
-            val bytes = withContext(Dispatchers.Default) { StickerCodec.encodeWebp(preview) }
+            // A debounced preview may still show the previous style. Save the current one.
+            val bytes = withContext(Dispatchers.Default) {
+                val sticker = StickerRenderer.render(subject, state.style)
+                try {
+                    StickerCodec.encodeWebp(sticker)
+                } finally {
+                    sticker.recycle()
+                }
+            }
             val updated = withContext(Dispatchers.IO) { repo.addSticker(state.packId, bytes) }
-            _editor.value = null
+            closeEditor()
             refresh()
             notify(if (updated != null) "Sticker saved" else "Couldn't save the sticker")
             if (updated != null) onSaved()
@@ -224,17 +283,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
 
     private fun renderPreview() {
-        val state = _editor.value ?: return
-        val subject = state.subject ?: return
-        val style = state.style
-        viewModelScope.launch {
-            val preview = withContext(Dispatchers.Default) { StickerRenderer.render(subject, style) }
-            val current = _editor.value
-            if (current?.subject === subject && current.style == style) {
-                _editor.value = current.copy(preview = preview)
-            } else {
-                preview.recycle()
-            }
-        }
+        previewRequests.trySend(Unit)
     }
 }

@@ -72,6 +72,30 @@ class StickerPackContentProviderTest {
     }
 
     @Test
+    fun cachedProviderObservesMetadataAndAssetChanges() {
+        val (_, provider, repo, authority) = fixture()
+        val pack = repo.createPack("Before")
+        repo.addSticker(pack.id, byteArrayOf(1, 2, 3), fileName = "stk_one.webp")
+        val uri = Uri.parse("content://$authority/metadata/${pack.id}")
+        provider.query(uri, null, null, null, null).close()
+        repo.renamePack(pack.id, "After!")
+        provider.query(uri, null, null, null, null).use { cursor ->
+            cursor.moveToFirst()
+            assertEquals("After!", cursor.getString(cursor.getColumnIndexOrThrow("name")))
+        }
+        val asset = Uri.parse("content://$authority/stickers_asset/${pack.id}/stk_one.webp")
+        provider.openFile(asset, "r").close()
+        // File loss must not serve a cached asset, even when pack.json is unchanged.
+        repo.stickerFile(pack.id, "stk_one.webp")!!.delete()
+        try {
+            provider.openFile(asset, "r")
+            fail("a deleted file must not be served from cached metadata")
+        } catch (_: FileNotFoundException) {
+            // expected
+        }
+    }
+
+    @Test
     fun openFileServesListedStickersOnly() {
         val (_, provider, repo, authority) = fixture()
         val pack = repo.createPack("Files")
