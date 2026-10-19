@@ -124,7 +124,7 @@ class ScreenRenderTest {
     @Test
     fun editorBottomLight() {
         editorScreen(dark = false)
-        capture("editor-light-bottom", scrollTo = "POSITION")
+        capture("editor-light-bottom", scrollTo = "BOTTOM")
     }
 
     @Test
@@ -136,18 +136,19 @@ class ScreenRenderTest {
     @Test
     fun editorBottomDark() {
         editorScreen(dark = true)
-        capture("editor-dark-bottom", scrollTo = "POSITION")
+        capture("editor-dark-bottom", scrollTo = "BOTTOM")
     }
 
     private fun editorScreen(dark: Boolean, transform: (EditorState) -> EditorState = { it }) {
-        val sticker = sampleSticker(0xFFFFAB5E.toInt())
+        val subject = sampleSubject(0xFFFFAB5E.toInt())
+        val style = StickerRenderer.Style(outline = 14, caption = "hello", captionColor = StickerRenderer.CaptionColor.CHERRY)
         val state = transform(
             EditorState(
                 packId = "pack-1",
-                source = sticker,
-                subject = sticker,
-                preview = sticker,
-                style = StickerRenderer.Style(outline = 10, caption = "hello", captionColor = StickerRenderer.CaptionColor.CHERRY),
+                source = subject,
+                subject = subject,
+                preview = StickerRenderer.render(subject, style),
+                style = style,
             ),
         )
         compose.setContent {
@@ -345,20 +346,20 @@ class ScreenRenderTest {
 
     // ------------------------------------------------------------- fixtures
 
-    private fun sampleSticker(circle: Int): Bitmap {
-        val photo = Bitmap.createBitmap(600, 800, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(photo)
-        canvas.drawColor(Color.rgb(242, 240, 248))
+    /** A cut-out subject on transparency, the way ML Kit hands it to the renderer. */
+    private fun sampleSubject(circle: Int): Bitmap {
+        val subject = Bitmap.createBitmap(600, 760, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(subject)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        paint.color = circle
-        canvas.drawCircle(300f, 260f, 170f, paint)
         paint.color = Color.rgb(66, 62, 58)
-        canvas.drawRoundRect(150f, 480f, 450f, 700f, 60f, 60f, paint)
-        return StickerRenderer.render(
-            photo,
-            StickerRenderer.Style(outline = 10, caption = "hi"),
-        )
+        canvas.drawRoundRect(110f, 440f, 490f, 760f, 150f, 150f, paint)
+        paint.color = circle
+        canvas.drawCircle(300f, 240f, 200f, paint)
+        return subject
     }
+
+    private fun sampleSticker(circle: Int, caption: String = ""): Bitmap =
+        StickerRenderer.render(sampleSubject(circle), StickerRenderer.Style(outline = 14, caption = caption))
 
     private fun packFixture(id: String = "pack-1", name: String = "My stickers", count: Int = 5): StickerPack {
         val dir = File(context.filesDir, "packs/$id").apply { mkdirs() }
@@ -369,9 +370,10 @@ class ScreenRenderTest {
             0xFFF07E9C.toInt(),
             0xFFD6C05C.toInt(),
         )
+        val captions = listOf("hi!", "", "lol", "", "yes")
         val names = circles.take(count).mapIndexed { index, circle ->
             val fileName = "s${index + 1}.webp"
-            File(dir, fileName).writeBytes(StickerCodec.encodeWebp(sampleSticker(circle)))
+            File(dir, fileName).writeBytes(StickerCodec.encodeWebp(sampleSticker(circle, captions[index])))
             fileName
         }
         return StickerPack(
