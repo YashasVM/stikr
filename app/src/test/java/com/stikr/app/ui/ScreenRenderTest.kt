@@ -269,6 +269,13 @@ class ScreenRenderTest {
     }
 
     @Test
+    fun packScreenWhatsAppDark() {
+        installWhatsApp()
+        packScreen(dark = true, pack = packFixture("pack-1", "My stickers"))
+        capture("pack-whatsapp-dark")
+    }
+
+    @Test
     fun packFewWhatsAppDark() {
         installWhatsApp()
         packScreen(dark = true, pack = packFixture("pack-few", "Dogs", count = 2))
