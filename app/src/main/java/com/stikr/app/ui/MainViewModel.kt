@@ -165,6 +165,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
             if (source == null) {
                 _editor.value = _editor.value?.copy(loading = false, status = null)
+                // Style edits made while loading were skipped by the preview worker.
+                renderPreview()
                 notify("Couldn't read that photo")
                 return@launch
             }
