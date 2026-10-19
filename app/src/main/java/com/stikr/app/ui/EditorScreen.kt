@@ -58,7 +58,7 @@ import com.stikr.app.render.StickerRenderer
 import com.stikr.app.ui.neo.Neo
 import com.stikr.app.ui.neo.NeoButton
 import com.stikr.app.ui.neo.NeoCard
-import com.stikr.app.ui.neo.NeoChip
+import com.stikr.app.ui.neo.NeoSegmented
 import com.stikr.app.ui.neo.NeoIconButton
 import com.stikr.app.ui.neo.NeoOutlinedButton
 import com.stikr.app.ui.neo.NeoTextField
@@ -376,19 +376,11 @@ private fun CaptionCard(state: EditorState, onStyle: (StickerRenderer.Style) -> 
                     color = palette.muted,
                     modifier = Modifier.weight(1f),
                 )
-                NeoChip(
-                    text = "Top",
-                    selected = state.style.captionPosition == StickerRenderer.CaptionPosition.TOP,
-                    onClick = {
-                        onStyle(state.style.copy(captionPosition = StickerRenderer.CaptionPosition.TOP))
-                    },
-                )
-                Spacer(Modifier.width(10.dp))
-                NeoChip(
-                    text = "Bottom",
-                    selected = state.style.captionPosition == StickerRenderer.CaptionPosition.BOTTOM,
-                    onClick = {
-                        onStyle(state.style.copy(captionPosition = StickerRenderer.CaptionPosition.BOTTOM))
+                NeoSegmented(
+                    options = listOf("Top", "Bottom"),
+                    selectedIndex = state.style.captionPosition.ordinal,
+                    onSelect = { index ->
+                        onStyle(state.style.copy(captionPosition = StickerRenderer.CaptionPosition.entries[index]))
                     },
                 )
             }

@@ -35,8 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stikr.app.data.StickerPack
-import com.stikr.app.ui.neo.EmojiBadge
-import com.stikr.app.ui.neo.LogoRow
+import com.stikr.app.ui.neo.NeoWordmark
 import com.stikr.app.ui.neo.Neo
 import com.stikr.app.ui.neo.NeoButton
 import com.stikr.app.ui.neo.NeoCard
@@ -87,7 +86,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                LogoRow(modifier = Modifier.padding(bottom = 6.dp))
+                NeoWordmark(modifier = Modifier.padding(bottom = 6.dp))
             }
 
             if (packs.isEmpty()) {
@@ -156,7 +155,6 @@ private fun EmptyHero(onMakeSticker: () -> Unit, onCreatePack: () -> Unit) {
             color = palette.muted,
         )
         Spacer(Modifier.height(24.dp))
-        EmojiBadge("\uD83C\uDFA8")
         Spacer(Modifier.height(26.dp))
         NeoButton(
             text = "Make a sticker",
@@ -212,7 +210,7 @@ private fun PackCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .neoFrame(RoundedCornerShape(12.dp), palette.card, palette.ink, 2.dp, 0.dp, palette.shadow)
+                .neoFrame(fill = palette.card, borderColor = palette.ink, shadowColor = palette.shadow, shadowOffset = 0.dp)
                 .padding(8.dp),
             contentAlignment = Alignment.Center,
         ) {

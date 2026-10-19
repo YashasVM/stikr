@@ -288,7 +288,6 @@ private fun StickerTile(file: File, onShare: () -> Unit, onDelete: () -> Unit) {
                 size = 28.dp,
                 iconSize = 15.dp,
                 shadow = 2.dp,
-                borderWidth = 1.5.dp,
             )
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
