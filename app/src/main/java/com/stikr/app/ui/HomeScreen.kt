@@ -352,7 +352,8 @@ private fun Mosaic(files: List<File>) {
             .fillMaxWidth()
             .aspectRatio(1f)
             .neoFrame(
-                fill = palette.card,
+                // A paper well, not white, so white sticker outlines stay visible.
+                fill = palette.creamDim,
                 borderColor = rule,
                 shadowColor = palette.shadow,
                 shape = NeoShapes.control,
@@ -371,7 +372,6 @@ private fun Mosaic(files: List<File>) {
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .then(if (file == null) Modifier.background(palette.creamDim) else Modifier)
                             .padding(5.dp),
                         contentAlignment = Alignment.Center,
                     ) {

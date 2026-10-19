@@ -396,6 +396,8 @@ private fun StickerTile(file: File, number: Int, onClick: () -> Unit) {
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .semantics { contentDescription = "Sticker $number" },
+            // A paper well, not white, so white sticker outlines stay visible.
+            fill = palette.creamDim,
             shape = NeoShapes.tile,
             shadow = NeoDimens.shadowSmall + 1.dp,
             padding = PaddingValues(10.dp),
