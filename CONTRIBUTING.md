@@ -76,7 +76,7 @@ python3 -m http.server 8000 --directory docs/site
 
 Open `http://localhost:8000`. Check every page at desktop and phone widths,
 light and dark modes, keyboard focus, and relative links. The Pages workflow
-publishes `docs/site/` when it or the workflow changes on `main`. The repository's
+publishes `docs/site/` on pushes to `main`. The repository's
 Pages source must be set to **GitHub Actions**.
 
 ## Release flow

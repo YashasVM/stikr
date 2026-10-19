@@ -150,5 +150,4 @@ before adding a feature.
 
 The [docs site](docs/site/index.html) is static HTML and one CSS file, with local
 images and Anton. Preview it with `python3 -m http.server 8000 --directory docs/site`.
-The [Pages workflow](.github/workflows/pages.yml) deploys it on pushes to `main`
-when the site or workflow changes. Select **GitHub Actions** as the repository's Pages source.
+The [Pages workflow](.github/workflows/pages.yml) deploys it on pushes to `main`. Select **GitHub Actions** as the repository's Pages source.
