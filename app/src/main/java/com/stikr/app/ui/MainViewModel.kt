@@ -54,6 +54,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
+    /** The pack being prepared for WhatsApp, or null. One export runs at a time. */
+    private val _exportingPackId = MutableStateFlow<String?>(null)
+    val exportingPackId: StateFlow<String?> = _exportingPackId.asStateFlow()
+
     private val previewRequests = Channel<Unit>(Channel.CONFLATED)
     private var imageRequest = 0L
 
@@ -251,11 +255,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             notify("WhatsApp needs at least ${PackRepository.MIN_WHATSAPP_STICKERS} stickers in a pack")
             return
         }
+        if (_exportingPackId.value != null) return
+        _exportingPackId.value = packId
         viewModelScope.launch {
-            val prepared = withContext(Dispatchers.IO) { PackExporter.ensureTray(getApplication(), repo, pack) }
-            val launched = PackExporter.launchWhatsApp(getApplication(), prepared)
-            refresh()
-            if (!launched) notify("WhatsApp isn't installed \u2014 share a single sticker instead")
+            try {
+                val prepared = withContext(Dispatchers.IO) { PackExporter.ensureTray(getApplication(), repo, pack) }
+                val launched = PackExporter.launchWhatsApp(getApplication(), prepared)
+                refresh()
+                if (!launched) notify("WhatsApp isn't installed \u2014 share a single sticker instead")
+            } finally {
+                _exportingPackId.value = null
+            }
         }
     }
 

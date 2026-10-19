@@ -41,6 +41,7 @@ fun StikrApp(viewModel: MainViewModel = viewModel()) {
     val packs by viewModel.packs.collectAsStateWithLifecycle()
     val editor by viewModel.editor.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
+    val exportingPackId by viewModel.exportingPackId.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var screen by rememberSaveable { mutableStateOf(Screen.HOME.name) }
@@ -114,6 +115,7 @@ fun StikrApp(viewModel: MainViewModel = viewModel()) {
                             onDeleteSticker = { viewModel.deleteSticker(pack.id, it) },
                             onShareSticker = { viewModel.shareSticker(pack.id, it) },
                             onExport = { viewModel.exportToWhatsApp(pack.id) },
+                            exporting = exportingPackId == pack.id,
                         )
                     }
                 }

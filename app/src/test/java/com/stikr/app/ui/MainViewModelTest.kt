@@ -75,4 +75,29 @@ class MainViewModelTest {
             store.clear()
         }
     }
+
+    @Test
+    fun exportReportsProgressUntilWhatsAppIsHandedThePack() {
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        val root = File(app.filesDir, "packs").apply { deleteRecursively() }
+        val repository = PackRepository(root)
+        val pack = repository.createPack("Export")
+        val sticker = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
+        sticker.eraseColor(Color.RED)
+        repeat(3) { repository.addSticker(pack.id, com.stikr.app.render.StickerCodec.encodeWebp(sticker)) }
+        sticker.recycle()
+        val model = MainViewModel(app)
+        val store = ViewModelStore().apply { put("test", model) }
+        try {
+            await { model.packs.value.singleOrNull()?.stickerCount == 3 }
+            model.exportToWhatsApp(pack.id)
+            assertEquals(pack.id, model.exportingPackId.value)
+            await { model.exportingPackId.value == null }
+            // WhatsApp isn't installed under Robolectric, so the export ends in a message.
+            assertNotNull(model.message.value)
+            assertNotNull(repository.getPack(pack.id)!!.trayImage)
+        } finally {
+            store.clear()
+        }
+    }
 }
