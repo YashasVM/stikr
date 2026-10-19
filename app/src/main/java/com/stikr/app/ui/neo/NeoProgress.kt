@@ -97,7 +97,8 @@ fun NeoProgressBar(
                         0f to size.width * (progress ?: 0f).coerceIn(0f, 1f)
                     } else {
                         val block = size.width * 0.38f
-                        val x = (size.width + block) * phase.value - block
+                        // Offset so the very first frame already shows the block.
+                        val x = (size.width + block) * ((phase.value + 0.45f) % 1f) - block
                         x to x + block
                     }
                     if (end <= start) return@onDrawBehind

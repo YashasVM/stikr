@@ -142,56 +142,58 @@ private class NeoFrameNode(
     var clipContent: Boolean,
 ) : Modifier.Node(), DrawModifierNode {
 
-    // Outlines are rebuilt only when the size, direction or density changes.
+    // The outline is rebuilt only when the size, direction or density changes.
+    // It is inset by half the border so the stroke's outer edge lands exactly
+    // on the layout bounds; fill, clip and shadow all use the same outline, so
+    // no fill can peek past the border at a rounded corner.
     private var cachedSize = Size.Unspecified
     private var cachedDirection: LayoutDirection? = null
     private var cachedDensity = 0f
-    private var body: Outline? = null
-    private var edge: Outline? = null
+    private var outline: Outline? = null
     private var stroke: Stroke? = null
     private var clip: Path? = null
 
     fun dropCache() {
-        body = null
+        outline = null
     }
 
     override fun ContentDrawScope.draw() {
         val borderPx = if (borderWidth > 0.dp) borderWidth.toPx() else 0f
-        if (body == null || cachedSize != size || cachedDirection != layoutDirection || cachedDensity != density) {
-            val outline = shape.createOutline(size, layoutDirection, this)
-            body = outline
-            edge = if (borderPx > 0f) {
-                shape.createOutline(Size(size.width - borderPx, size.height - borderPx), layoutDirection, this)
-            } else {
-                null
-            }
+        if (outline == null || cachedSize != size || cachedDirection != layoutDirection || cachedDensity != density) {
+            val built = shape.createOutline(Size(size.width - borderPx, size.height - borderPx), layoutDirection, this)
+            outline = built
             stroke = if (borderPx > 0f) Stroke(width = borderPx) else null
-            clip = if (clipContent) Path().apply { addOutlineOf(outline) } else null
+            clip = if (clipContent) Path().apply { addOutlineOf(built) } else null
             cachedSize = size
             cachedDirection = layoutDirection
             cachedDensity = density
         }
-        val outline = body ?: return
+        val edge = outline ?: return
+        val inset = borderPx / 2f
+        val style = stroke
         val depth = shadowOffset.toPx()
         val sink = depth * (press?.value ?: 0f).coerceIn(0f, 1f)
 
         if (depth > 0f && sink < depth) {
-            translate(depth, depth) { drawOutline(outline, color = shadowColor) }
+            translate(depth + inset, depth + inset) {
+                drawOutline(edge, color = shadowColor)
+                if (style != null) drawOutline(edge, color = shadowColor, style = style)
+            }
         }
         translate(sink, sink) {
-            drawOutline(outline, color = fill)
+            translate(inset, inset) { drawOutline(edge, color = fill) }
             val path = clip
             if (path != null) {
-                clipPath(path) { this@draw.drawContent() }
+                translate(inset, inset) {
+                    clipPath(path) {
+                        translate(-inset, -inset) { this@draw.drawContent() }
+                    }
+                }
             } else {
                 this@draw.drawContent()
             }
-            val border = edge
-            val style = stroke
-            if (border != null && style != null) {
-                translate(borderPx / 2f, borderPx / 2f) {
-                    drawOutline(border, color = borderColor, style = style)
-                }
+            if (style != null) {
+                translate(inset, inset) { drawOutline(edge, color = borderColor, style = style) }
             }
         }
     }

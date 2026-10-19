@@ -53,6 +53,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -894,6 +896,7 @@ fun NeoTextField(
     enabled: Boolean = true,
     singleLine: Boolean = true,
     imeAction: ImeAction = ImeAction.Done,
+    focusRequester: FocusRequester? = null,
 ) {
     val palette = Neo.palette
     val interaction = remember { MutableInteractionSource() }
@@ -924,6 +927,7 @@ fun NeoTextField(
             ),
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                 .then(if (label != null) Modifier.semantics { contentDescription = label } else Modifier),
             decorationBox = { inner ->
                 Box(
