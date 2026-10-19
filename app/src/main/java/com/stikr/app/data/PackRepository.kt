@@ -73,7 +73,8 @@ class PackRepository(private val root: File) {
         File(root, packId).resolve(fileName).delete()
         pack.copy(
             stickers = pack.stickers - fileName,
-            trayImage = pack.trayImage?.takeUnless { it == fileName },
+            // The generated tray represents the first sticker.
+            trayImage = pack.trayImage?.takeUnless { it == fileName || pack.stickers.firstOrNull() == fileName },
         ).also { writePack(it) }
     }
 

@@ -105,6 +105,17 @@ class PackRepositoryTest {
     }
 
     @Test
+    fun deletingFirstStickerInvalidatesGeneratedTray() {
+        val repository = repo()
+        val pack = repository.createPack("Tray")
+        repository.addSticker(pack.id, byteArrayOf(1), "stk_a.webp")
+        repository.addSticker(pack.id, byteArrayOf(2), "stk_b.webp")
+        repository.setTrayImage(pack.id, byteArrayOf(3))
+        assertNotNull(repository.deleteSticker(pack.id, "stk_b.webp")?.trayImage)
+        assertNull(repository.deleteSticker(pack.id, "stk_a.webp")?.trayImage)
+    }
+
+    @Test
     fun newestPackComesFirst() {
         val repository = repo()
         val older = repository.createPack("Older")
