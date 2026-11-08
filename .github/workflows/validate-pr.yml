@@ -1,0 +1,32 @@
+name: Validate PR
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK packages
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          SDKMGR="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMGR" "platforms;android-34" "build-tools;34.0.0"
+      - name: Build debug APK and run unit tests
+        run: ./gradlew --no-daemon assembleDebug testDebugUnitTest --stacktrace
